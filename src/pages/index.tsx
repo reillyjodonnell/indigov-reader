@@ -33,23 +33,10 @@ const Home: NextPage = () => {
                 email={email}
                 firstName={firstName}
                 lastName={lastName}
-                zipCode={zipcode}
+                zipcode={zipcode}
               />
             );
           })}
-
-          <UserCard
-            email="test@abc.com"
-            firstName="Mike"
-            lastName="Meyers"
-            zipCode="123456"
-          />
-          <UserCard
-            email="test@abc.com"
-            firstName="Mike"
-            lastName="Meyers"
-            zipCode="123456"
-          />
         </div>
       </main>
     </>
@@ -62,35 +49,40 @@ type UserCardProps = {
   email: string;
   firstName: string;
   lastName: string;
-  zipCode: string;
+  zipcode: string;
 };
 
-const UserCard = ({ email, firstName, lastName, zipCode }: UserCardProps) => {
+const UserCard = ({ email, firstName, lastName, zipcode }: UserCardProps) => {
   return (
     <section className="my-2 flex flex-col justify-center rounded border-2 border-gray-500 p-6 shadow-xl duration-500 motion-safe:hover:scale-105">
       <h2 className="text-lg text-gray-700">{`${firstName} ${lastName}`}</h2>
       <p className="text-sm text-gray-600">{email}</p>
-      <p className="text-sm text-gray-600">{zipCode}</p>
+      <p className="text-sm text-gray-600">{zipcode}</p>
     </section>
   );
 };
 
+type User = {
+  FirstName: string;
+  LastName: string;
+  Email: string;
+  ZipCode: string;
+};
+
 const FileDropZone = () => {
   const [fileData, setFileData] = useState<any>([]);
+  const userMutation = trpc.example.createUser.useMutation();
 
   const saveUser = useCallback(() => {
-    // write each user to prisma
-    fileData.forEach(async (user: any) => {
-      await prisma?.user.create({
-        data: {
-          email: user?.Email,
-          firstName: user?.FirstName,
-          lastName: user?.LastName,
-          zipcode: user?.ZipCode,
-        },
-      });
+    // trpc mutation to save to db
+    fileData.forEach(async (user: User) => {
+      const firstName = user?.FirstName;
+      const lastName = user?.LastName;
+      const email = user?.Email;
+      const zipcode = user?.ZipCode;
+      await userMutation.mutate({ firstName, lastName, email, zipcode });
     });
-  }, []);
+  }, [fileData, userMutation]);
 
   const onDrop = useCallback(async (acceptedFiles: any) => {
     console.log("DROPPED");
@@ -98,7 +90,7 @@ const FileDropZone = () => {
       const text = await file?.text();
       const result = parse(text, { header: true });
       // Each row should now be the key of the object
-      setFileData(result);
+      setFileData(result?.data);
     });
   }, []);
   const { getRootProps, getInputProps } = useDropzone({
@@ -124,12 +116,30 @@ const FileDropZone = () => {
     <div>
       <span>Here is what you submitted 😄 </span>
       {/* Map over the file and display what we parsed from the file */}
-      {/* {fileData.map((item) => {
-        const {};
-      })} */}
+      {fileData.map((item: User) => {
+        const firstName = item?.FirstName;
+        const lastName = item?.LastName;
+        const email = item?.Email;
+        const zipcode = item?.ZipCode;
+
+        return (
+          <UserCard
+            key={email}
+            email={email}
+            firstName={firstName}
+            lastName={lastName}
+            zipcode={zipcode}
+          />
+        );
+      })}
 
       {/* If that looks good allow the user to save and write to the database */}
-      <button onClick={saveUser}>Save</button>
+      <button
+        className="py flex items-center justify-center border-2 border-purple-500 bg-purple-300 px-2 text-white opacity-90 hover:opacity-100"
+        onClick={saveUser}
+      >
+        Save
+      </button>
     </div>
   );
 };
